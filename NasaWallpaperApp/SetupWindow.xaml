@@ -1,0 +1,323 @@
+<Window x:Class="NasaWallpaperApp.SetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:NasaWallpaperApp"
+        Title="Settings" Height="650" Width="1000"
+        WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
+        Background="Transparent" WindowStartupLocation="CenterScreen" FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <local:BoolToVisConverter x:Key="BoolToVisConverter"/>
+
+        <!-- RADIO TOGGLE BUTTON STYLE -->
+        <Style x:Key="RadioToggleBtn" TargetType="RadioButton">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="#AAA"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#444"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Height" Value="35"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Margin="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Background" TargetName="border" Value="{StaticResource AccentColor}"/>
+                                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource AccentColor}"/>
+                                <Setter Property="Foreground" Value="Black"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" TargetName="border" Value="#666"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- TOGGLE SWITCH STYLE -->
+        <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal">
+                            <Grid x:Name="BackgroundGrid" Width="45" Height="22">
+                                <Border x:Name="Background" Background="#444" CornerRadius="11" />
+                                <Ellipse x:Name="Dot" Fill="White" Width="16" Height="16" HorizontalAlignment="Left" Margin="3,0">
+                                    <Ellipse.RenderTransform>
+                                        <TranslateTransform X="0"/>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                            </Grid>
+                            <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Background" Property="Background" Value="{StaticResource AccentColor}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Dot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="23" Duration="0:0:0.1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Dot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="0:0:0.1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- REFINED COMBOBOX STYLE -->
+        <Style x:Key="ModernCombo" TargetType="ComboBox">
+            <Setter Property="Background" Value="#252526"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#444"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="4">
+                                <Grid>
+                                    <ToggleButton x:Name="ToggleButton" Background="Transparent" BorderThickness="0" Focusable="false" IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press">
+                                        <Grid HorizontalAlignment="Right" Width="20">
+                                            <Path x:Name="Arrow" Fill="#666" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z"/>
+                                        </Grid>
+                                    </ToggleButton>
+                                    <ContentPresenter Margin="{TemplateBinding Padding}" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" VerticalAlignment="Center" HorizontalAlignment="Left" IsHitTestVisible="False"/>
+                                </Grid>
+                            </Border>
+                            <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                <Border x:Name="DropDownBorder" Background="#2D2D2D" BorderBrush="#444" BorderThickness="1" CornerRadius="4" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="300">
+                                    <ScrollViewer SnapsToDevicePixels="True">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border CornerRadius="10" Background="{StaticResource BgDark}" BorderBrush="#333" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="60"/>
+            </Grid.RowDefinitions>
+
+            <!-- TITLE BAR -->
+            <Border Grid.Row="0" Background="Transparent" MouseDown="TitleBar_MouseDown">
+                <Grid>
+                    <TextBlock Text="App Preferences" Foreground="White" VerticalAlignment="Center" Margin="20,0,0,0" FontWeight="SemiBold"/>
+                    <Button Content="X" Click="Close_Click" Style="{StaticResource IconBtn}" HorizontalAlignment="Right" Width="40" Margin="0,0,5,0" Foreground="White"/>
+                </Grid>
+            </Border>
+
+            <!-- CONTENT -->
+            <Grid Grid.Row="1" Margin="25,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280"/> <!-- SERVER -->
+                    <ColumnDefinition Width="280"/> <!-- AUTOMATION -->
+                    <ColumnDefinition Width="*"/>   <!-- SOURCE -->
+                </Grid.ColumnDefinitions>
+
+                <!-- SECTION 1: SERVER -->
+                <Border Grid.Column="0" BorderBrush="#333" BorderThickness="0,0,1,0" Margin="0,0,20,0">
+                    <StackPanel Margin="0,0,20,0">
+                        <TextBlock Text="SERVICE PROVIDER" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentColor}" Margin="0,0,0,15"/>
+                        <UniformGrid Columns="2" Margin="0,0,0,25">
+                             <RadioButton Name="RbProvImmich" Content="Immich" GroupName="Provider" Style="{StaticResource RadioToggleBtn}" Checked="Provider_Checked" IsChecked="True"/>
+                             <RadioButton Name="RbProvGoogle" Content="Google" GroupName="Provider" Style="{StaticResource RadioToggleBtn}" Checked="Provider_Checked"/>
+                        </UniformGrid>
+
+                        <Grid>
+                            <!-- IMMICH PANEL -->
+                            <StackPanel Name="ImmichServerPanel">
+                                <TextBlock Text="IMMICH CONFIG" FontSize="11" FontWeight="Bold" Foreground="#666" Margin="0,0,0,15"/>
+                                
+                                <TextBlock Text="Server URL" Foreground="#AAA" FontSize="11" Margin="0,0,0,5"/>
+                                <TextBox Name="UrlInput" Height="35" Padding="8,5" Background="#252526" Foreground="White" BorderBrush="#444" VerticalContentAlignment="Center"/>
+                                
+                                <TextBlock Text="API Key" Foreground="#AAA" FontSize="11" Margin="0,15,0,5"/>
+                                <PasswordBox Name="KeyInput" Height="35" Padding="8,5" Background="#252526" Foreground="White" BorderBrush="#444" VerticalContentAlignment="Center"/>
+
+                                <Button Content="Verify Immich" Click="Connect_Click" Style="{StaticResource AccentBtn}" Margin="0,20,0,10" Height="40"/>
+                                <TextBlock Name="ConnectionStatus" Text="Ready" Foreground="#666" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- GOOGLE PANEL -->
+                            <StackPanel Name="GoogleServerPanel" Visibility="Collapsed">
+                                <TextBlock Text="GOOGLE API CONFIG" FontSize="11" FontWeight="Bold" Foreground="#666" Margin="0,0,0,15"/>
+                                
+                                <TextBlock Text="Client ID" Foreground="#AAA" FontSize="11" Margin="0,0,0,5"/>
+                                <TextBox Name="GoogleClientIdInput" Height="35" Padding="8,5" Background="#252526" Foreground="White" BorderBrush="#444" VerticalContentAlignment="Center"/>
+                                
+                                <TextBlock Text="Client Secret" Foreground="#AAA" FontSize="11" Margin="0,15,0,5"/>
+                                <PasswordBox Name="GoogleClientSecretInput" Height="35" Padding="8,5" Background="#252526" Foreground="White" BorderBrush="#444" VerticalContentAlignment="Center"/>
+
+                                <Button Name="GoogleLoginBtn" Content="Login with Google" Click="GoogleLogin_Click" Style="{StaticResource AccentBtn}" Margin="0,20,0,10" Height="40"/>
+                                <TextBlock Name="GoogleStatus" Text="Not authenticated" Foreground="#666" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"/>
+                                
+                                <Button Content="Fetch Data Options" Name="GoogleFetchBtn" Click="Connect_Click" Style="{StaticResource ModernBtn}" Margin="0,10,0,0" Height="35" Visibility="Collapsed"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- SECTION 2: AUTOMATION -->
+                <Border Grid.Column="1" BorderBrush="#333" BorderThickness="0,0,1,0" Margin="0,0,20,0">
+                    <StackPanel Margin="0,0,20,0">
+                        <TextBlock Text="AUTOMATION" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentColor}" Margin="0,0,0,20"/>
+                        
+                        <Border Background="#252526" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <CheckBox Name="AutoChangeCheck" Content="Enable Auto-Refresh" Style="{StaticResource ToggleSwitch}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Text="Automatically cycles through photos in the background." Foreground="#666" FontSize="11" Margin="55,5,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="REFRESH INTERVAL" Foreground="#AAA" FontSize="11" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="15"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Hours" Foreground="#666" FontSize="10" Margin="0,0,0,5"/>
+                                <ComboBox Name="HourCombo" Style="{StaticResource ModernCombo}" Height="40"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Minutes" Foreground="#666" FontSize="10" Margin="0,0,0,5"/>
+                                <ComboBox Name="MinuteCombo" Style="{StaticResource ModernCombo}" Height="40"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Button Content="Update Automation" Click="SaveAutomation_Click" Style="{StaticResource ModernBtn}" Margin="0,30,0,0" Height="40" Background="#333"/>
+                        <TextBlock Text="App must be running in tray for automation to work." Foreground="#444" FontSize="10" Margin="0,10,0,0" TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- SECTION 3: SOURCE -->
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Mode -->
+                        <RowDefinition Height="*"/>    <!-- List -->
+                    </Grid.RowDefinitions>
+
+                    <!-- MODE SELECTION -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                         <TextBlock Text="GALLERY MODE" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentColor}" Margin="0,0,0,10"/>
+                         <UniformGrid Columns="3">
+                             <RadioButton Name="RbModePeople" Content="People" GroupName="Mode" Style="{StaticResource RadioToggleBtn}" Checked="Mode_Checked" IsChecked="True"/>
+                             <RadioButton Name="RbModeAlbum" Content="Albums" GroupName="Mode" Style="{StaticResource RadioToggleBtn}" Checked="Mode_Checked"/>
+                             <RadioButton Name="RbModeRandom" Content="Random" GroupName="Mode" Style="{StaticResource RadioToggleBtn}" Checked="Mode_Checked"/>
+                         </UniformGrid>
+                         <TextBlock Name="ModeHint" Text="Select specific people from your library." Foreground="#555" FontSize="10" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="2" Background="#252526" CornerRadius="8" Padding="5">
+                        <Grid>
+                            <ListBox Name="PeopleList" SelectionMode="Multiple" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel IsItemsHost="True" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="85" Margin="4">
+                                            <StackPanel>
+                                                <Border Width="60" Height="60" CornerRadius="30" ClipToBounds="True" Background="#333" HorizontalAlignment="Center">
+                                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" Foreground="#EEE" FontSize="10" 
+                                                           TextAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" 
+                                                           MinHeight="25" VerticalAlignment="Top"
+                                                           ToolTip="{Binding Id}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="2">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True"><Setter Property="Background" TargetName="bd" Value="#224CC2FF"/><Setter Property="BorderBrush" TargetName="bd" Value="{StaticResource AccentColor}"/><Setter Property="BorderThickness" TargetName="bd" Value="1"/></Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+
+                            <ListBox Name="AlbumList" SelectionMode="Single" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                                <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel IsItemsHost="True" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="110" Margin="4">
+                                            <StackPanel>
+                                                <Border Width="110" Height="70" CornerRadius="4" ClipToBounds="True" Background="#333">
+                                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" Foreground="#AAA" FontSize="10" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="4">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True"><Setter Property="Background" TargetName="bd" Value="#224CC2FF"/><Setter Property="BorderBrush" TargetName="bd" Value="{StaticResource AccentColor}"/><Setter Property="BorderThickness" TargetName="bd" Value="1"/></Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+
+                            <StackPanel Name="RandomPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
+                                <TextBlock Text="🎲" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                <TextBlock Text="Shuffle Library" Name="RandomText" Foreground="#666" FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- FOOTER -->
+            <Border Grid.Row="2" Background="#252526" CornerRadius="0,0,10,10" BorderBrush="#333" BorderThickness="0,1,0,0">
+                <Grid Margin="30,0">
+                    <Button Content="Reset App &amp; Clear Data" Click="ResetApp_Click" Foreground="#882222" Background="Transparent" BorderThickness="0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="11" Cursor="Hand"/>
+                    <Button Content="Close &amp; Save All" Click="Save_Click" Style="{StaticResource AccentBtn}" HorizontalAlignment="Right" Width="180" Height="40" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
