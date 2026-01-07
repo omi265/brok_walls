@@ -5,6 +5,8 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <AssemblyName>Bro-k Walls</AssemblyName>
     <RootNamespace>BroKWalls</RootNamespace>
+    <Version>0.0.1-alpha</Version>
+    <FileVersion>0.0.1.0</FileVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
