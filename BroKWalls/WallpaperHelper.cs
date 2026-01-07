@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace BroKWalls
 {
@@ -40,6 +41,9 @@ namespace BroKWalls
     {
         public static void SetWallpaper(string path, DesktopWallpaperPosition position)
         {
+            // Always set registry first as a reliable baseline
+            SetWallpaperStyleRegistry(position);
+
             IDesktopWallpaper? wallpaper = null;
             try
             {
@@ -70,6 +74,45 @@ namespace BroKWalls
             {
                 if (wallpaper != null) Marshal.ReleaseComObject(wallpaper);
             }
+        }
+
+        private static void SetWallpaperStyleRegistry(DesktopWallpaperPosition position)
+        {
+            using RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop", true)!;
+            
+            string wallpaperStyle = "0";
+            string tileWallpaper = "0";
+
+            switch (position)
+            {
+                case DesktopWallpaperPosition.Fill:
+                    wallpaperStyle = "10";
+                    tileWallpaper = "0";
+                    break;
+                case DesktopWallpaperPosition.Fit:
+                    wallpaperStyle = "6";
+                    tileWallpaper = "0";
+                    break;
+                case DesktopWallpaperPosition.Stretch:
+                    wallpaperStyle = "2";
+                    tileWallpaper = "0";
+                    break;
+                case DesktopWallpaperPosition.Tile:
+                    wallpaperStyle = "0";
+                    tileWallpaper = "1";
+                    break;
+                case DesktopWallpaperPosition.Center:
+                    wallpaperStyle = "0";
+                    tileWallpaper = "0";
+                    break;
+                case DesktopWallpaperPosition.Span:
+                    wallpaperStyle = "22";
+                    tileWallpaper = "0";
+                    break;
+            }
+
+            key.SetValue(@"WallpaperStyle", wallpaperStyle);
+            key.SetValue(@"TileWallpaper", tileWallpaper);
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]

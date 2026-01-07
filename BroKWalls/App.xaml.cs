@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,31 +15,32 @@ namespace BroKWalls
         private WallpaperService _wallpaperService = new WallpaperService();
         private System.Threading.Timer? _timer;
         private AppConfig? _config;
+        private Icon? _originalIcon;
+        private bool _isRefreshing = false;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            // Ensure app doesn't close when MainWindow closes
             this.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
             _config = ConfigManager.Load();
 
             SetupTrayIcon();
             SetupTimer();
+
+            ShowMainWindow();
             
-            // Optional: Run one update immediately if enabled
             if (_config?.AutoChangeEnabled == true)
             {
-                Task.Run(() => _wallpaperService.PerformAutoChangeAsync());
+                _ = PerformRefreshWithFeedback();
             }
         }
 
         private void SetupTrayIcon()
         {
             _trayIcon = new NotifyIcon();
-            // Use the icon from the exe
-            _trayIcon.Icon = Icon.ExtractAssociatedIcon(System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "");
+            _originalIcon = Icon.ExtractAssociatedIcon(System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "");
+            _trayIcon.Icon = _originalIcon;
             _trayIcon.Visible = true;
             _trayIcon.Text = "Bro-k Walls";
 
@@ -50,7 +52,7 @@ namespace BroKWalls
         {
             if (e.Button == MouseButtons.Left)
             {
-                ShowMainWindow();
+                _ = PerformRefreshWithFeedback();
             }
             else if (e.Button == MouseButtons.Right)
             {
@@ -58,15 +60,73 @@ namespace BroKWalls
             }
         }
 
+        private async Task PerformRefreshWithFeedback()
+        {
+            if (_isRefreshing) return;
+            _isRefreshing = true;
+
+            _trayIcon?.ShowBalloonTip(1000, "Bro-k Walls", "Refreshing wallpaper...", ToolTipIcon.None);
+            
+            using var cts = new CancellationTokenSource();
+            var animationTask = StartLoadingAnimation(cts.Token);
+
+            try
+            {
+                await _wallpaperService.PerformAutoChangeAsync();
+            }
+            finally
+            {
+                cts.Cancel();
+                await animationTask;
+                _isRefreshing = false;
+                if (_trayIcon != null) _trayIcon.Icon = _originalIcon;
+            }
+        }
+
+        private async Task StartLoadingAnimation(CancellationToken token)
+        {
+            int angle = 0;
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    using var bitmap = new Bitmap(32, 32);
+                    using (var g = Graphics.FromImage(bitmap))
+                    {
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        g.Clear(Color.Transparent);
+                        
+                        // Draw a spinning arc
+                        using var pen = new Pen(Color.FromArgb(76, 194, 255), 4); // Accent color #4CC2FF
+                        g.DrawArc(pen, 4, 4, 24, 24, angle, 270);
+                    }
+
+                    var hIcon = bitmap.GetHicon();
+                    using var newIcon = Icon.FromHandle(hIcon);
+                    
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => {
+                        if (_trayIcon != null && !token.IsCancellationRequested)
+                            _trayIcon.Icon = (Icon)newIcon.Clone();
+                    });
+
+                    // Cleanup hIcon to prevent memory leak
+                    DestroyIcon(hIcon);
+                }
+                catch { }
+
+                angle = (angle + 30) % 360;
+                await Task.Delay(100);
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        extern static bool DestroyIcon(IntPtr handle);
+
         private void ShowTrayMenu()
         {
             var menu = new TrayMenuWindow();
             menu.OpenRequested += ShowMainWindow;
-            menu.RefreshRequested += async () => 
-            {
-                _trayIcon?.ShowBalloonTip(1000, "Bro-k Walls", "Refreshing wallpaper...", ToolTipIcon.None);
-                await _wallpaperService.PerformAutoChangeAsync();
-            };
+            menu.RefreshRequested += () => _ = PerformRefreshWithFeedback();
             menu.AdjustRequested += () => 
             {
                 ShowMainWindow();
@@ -81,7 +141,7 @@ namespace BroKWalls
             if (_mainWindow == null)
             {
                 _mainWindow = new MainWindow();
-                _mainWindow.Closed += (s, e) => _mainWindow = null; // Dispose reference on close
+                _mainWindow.Closed += (s, e) => _mainWindow = null;
             }
             _mainWindow.Show();
             _mainWindow.Activate();
@@ -92,19 +152,16 @@ namespace BroKWalls
             _timer?.Dispose();
             if (_config?.AutoChangeEnabled == true)
             {
-                // Convert minutes to milliseconds
                 long period = (long)TimeSpan.FromMinutes(_config.AutoChangeIntervalMinutes).TotalMilliseconds;
-                // Start after period, repeat every period
                 _timer = new System.Threading.Timer(TimerCallback, null, period, period);
             }
         }
 
-        private async void TimerCallback(object? state)
+        private void TimerCallback(object? state)
         {
-            await _wallpaperService.PerformAutoChangeAsync();
+            _ = PerformRefreshWithFeedback();
         }
         
-        // Public method for MainWindow to request timer reset/update
         public void UpdateConfigAndTimer()
         {
             _config = ConfigManager.Load();
@@ -115,6 +172,7 @@ namespace BroKWalls
         {
             _trayIcon?.Dispose();
             _timer?.Dispose();
+            _originalIcon?.Dispose();
             base.OnExit(e);
         }
     }

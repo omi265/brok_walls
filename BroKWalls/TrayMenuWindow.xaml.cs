@@ -10,6 +10,8 @@ namespace BroKWalls
         public event Action? AdjustRequested;
         public event Action? ExitRequested;
 
+        private bool _isClosing = false;
+
         public TrayMenuWindow()
         {
             InitializeComponent();
@@ -56,31 +58,38 @@ namespace BroKWalls
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
+            SafeClose();
+        }
+
+        private void SafeClose()
+        {
+            if (_isClosing) return;
+            _isClosing = true;
             this.Close();
         }
 
         private void Open_Click(object sender, RoutedEventArgs e)
         {
             OpenRequested?.Invoke();
-            this.Close();
+            SafeClose();
         }
 
         private void Refresh_Click(object sender, RoutedEventArgs e)
         {
             RefreshRequested?.Invoke();
-            this.Close();
+            SafeClose();
         }
 
         private void Adjust_Click(object sender, RoutedEventArgs e)
         {
             AdjustRequested?.Invoke();
-            this.Close();
+            SafeClose();
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             ExitRequested?.Invoke();
-            this.Close();
+            SafeClose();
         }
     }
 }
