@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media.Effects;
 
-namespace NasaWallpaperApp
+namespace BroKWalls
 {
     public class BoolToVisConverter : IValueConverter
     {

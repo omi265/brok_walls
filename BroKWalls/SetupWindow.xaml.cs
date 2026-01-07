@@ -11,7 +11,7 @@ using System.Net;
 using System.Text;
 using System.Diagnostics;
 
-namespace NasaWallpaperApp
+namespace BroKWalls
 {
     public partial class SetupWindow : Window
     {
@@ -478,7 +478,7 @@ namespace NasaWallpaperApp
         {
             if (System.Windows.MessageBox.Show("Delete all data?", "Reset", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
-                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NasaWallpaperApp");
+                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bro-k Walls");
                 if (Directory.Exists(dir)) Directory.Delete(dir, true);
                 System.Windows.Application.Current.Shutdown();
             }

@@ -1,16 +1,18 @@
 using System;
 using System.Windows;
 
-namespace NasaWallpaperApp
+namespace BroKWalls
 {
     public partial class TrayMenuWindow : Window
     {
-        private readonly MainWindow _main;
+        public event Action? OpenRequested;
+        public event Action? RefreshRequested;
+        public event Action? AdjustRequested;
+        public event Action? ExitRequested;
 
-        public TrayMenuWindow(MainWindow main)
+        public TrayMenuWindow()
         {
             InitializeComponent();
-            _main = main;
             this.Loaded += TrayMenuWindow_Loaded;
         }
 
@@ -59,25 +61,25 @@ namespace NasaWallpaperApp
 
         private void Open_Click(object sender, RoutedEventArgs e)
         {
-            _main.ShowFromTray();
+            OpenRequested?.Invoke();
             this.Close();
         }
 
         private void Refresh_Click(object sender, RoutedEventArgs e)
         {
-            _main.RefreshFromTray();
+            RefreshRequested?.Invoke();
             this.Close();
         }
 
         private void Adjust_Click(object sender, RoutedEventArgs e)
         {
-            _main.AdjustFromTray();
+            AdjustRequested?.Invoke();
             this.Close();
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
-            _main.ExitFromTray();
+            ExitRequested?.Invoke();
             this.Close();
         }
     }

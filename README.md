@@ -1,4 +1,4 @@
-# Immich Wallpaper Changer
+# Bro-k Walls
 
 A functional Windows desktop application that synchronizes your Immich photo library with your desktop wallpaper. 
 

@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 
-namespace NasaWallpaperApp
+namespace BroKWalls
 {
     public class SelectableItem : INotifyPropertyChanged
     {

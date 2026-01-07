@@ -3,7 +3,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace NasaWallpaperApp
+namespace BroKWalls
 {
     [JsonConverter(typeof(StringEnumConverter))]
     public enum PhotoProvider
@@ -53,7 +53,7 @@ namespace NasaWallpaperApp
     {
         private static string ConfigPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NasaWallpaperApp",
+            "Bro-k Walls",
             "config.json");
 
         public static void Save(AppConfig config)

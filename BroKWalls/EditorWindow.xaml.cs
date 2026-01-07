@@ -7,7 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Linq;
 
-namespace NasaWallpaperApp
+namespace BroKWalls
 {
     public partial class EditorWindow : Window
     {
