@@ -48,8 +48,11 @@ namespace NasaWallpaperApp
             if (config != null)
             {
                 UrlInput.Text = config.BaseUrl;
+                FallbackUrlInput.Text = config.FallbackBaseUrl;
+                LocalPathText.Text = string.IsNullOrEmpty(config.LocalFolderPath) ? "No folder selected" : config.LocalFolderPath;
                 KeyInput.Password = config.ApiKey;
                 AutoChangeCheck.IsChecked = config.AutoChangeEnabled;
+                MinimizeToTrayCheck.IsChecked = config.MinimizeToTrayOnClose;
                 
                 int h = config.AutoChangeIntervalMinutes / 60;
                 int m = config.AutoChangeIntervalMinutes % 60;
@@ -68,6 +71,7 @@ namespace NasaWallpaperApp
                 }
 
                 if (config.Provider == PhotoProvider.Google) RbProvGoogle.IsChecked = true;
+                else if (config.Provider == PhotoProvider.Local) RbProvLocal.IsChecked = true;
                 else RbProvImmich.IsChecked = true;
 
                 switch (config.Mode)
@@ -141,10 +145,17 @@ namespace NasaWallpaperApp
 
             ImmichServerPanel.Visibility = RbProvImmich.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             GoogleServerPanel.Visibility = RbProvGoogle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            LocalServerPanel.Visibility = RbProvLocal.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
             PeopleList.Visibility = Visibility.Collapsed;
             AlbumList.Visibility = Visibility.Collapsed;
             RandomPanel.Visibility = Visibility.Collapsed;
+            
+            if (RbProvLocal.IsChecked == true)
+            {
+                ModeHint.Text = "All photos in the selected folder will be used.";
+                return;
+            }
 
             bool isGoogle = RbProvGoogle.IsChecked == true;
 
@@ -411,6 +422,15 @@ namespace NasaWallpaperApp
             } catch { }
         }
 
+        private void BrowseFolder_Click(object sender, RoutedEventArgs e)
+        {
+            using var dialog = new System.Windows.Forms.FolderBrowserDialog();
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                LocalPathText.Text = dialog.SelectedPath;
+            }
+        }
+
         private void SaveAutomation_Click(object sender, RoutedEventArgs e)
         {
             int h = int.Parse(HourCombo.SelectedItem?.ToString() ?? "0");
@@ -418,6 +438,7 @@ namespace NasaWallpaperApp
             int total = (h * 60) + m;
             var c = ConfigManager.Load() ?? new AppConfig();
             c.AutoChangeEnabled = AutoChangeCheck.IsChecked == true;
+            c.MinimizeToTrayOnClose = MinimizeToTrayCheck.IsChecked == true;
             c.AutoChangeIntervalMinutes = total > 0 ? total : 1;
             ConfigManager.Save(c);
             System.Windows.MessageBox.Show("Automation updated!");
@@ -426,10 +447,12 @@ namespace NasaWallpaperApp
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             var c = ConfigManager.Load() ?? new AppConfig();
-            c.Provider = RbProvGoogle.IsChecked == true ? PhotoProvider.Google : PhotoProvider.Immich;
+            c.Provider = RbProvGoogle.IsChecked == true ? PhotoProvider.Google : (RbProvLocal.IsChecked == true ? PhotoProvider.Local : PhotoProvider.Immich);
             c.Mode = RbModeAlbum.IsChecked == true ? PhotoMode.Album : (RbModeRandom.IsChecked == true ? PhotoMode.Random : PhotoMode.People);
             
             c.BaseUrl = UrlInput.Text.Trim();
+            c.FallbackBaseUrl = FallbackUrlInput.Text.Trim();
+            c.LocalFolderPath = LocalPathText.Text == "No folder selected" ? "" : LocalPathText.Text;
             c.ApiKey = KeyInput.Password.Trim();
             c.GoogleClientId = GoogleClientIdInput.Text.Trim();
             c.GoogleClientSecret = GoogleClientSecretInput.Password.Trim();

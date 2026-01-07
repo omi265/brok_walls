@@ -9,7 +9,8 @@ namespace NasaWallpaperApp
     public enum PhotoProvider
     {
         Immich,
-        Google
+        Google,
+        Local
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
@@ -25,8 +26,12 @@ namespace NasaWallpaperApp
         public PhotoProvider Provider { get; set; } = PhotoProvider.Immich;
         public PhotoMode Mode { get; set; } = PhotoMode.People;
 
+        // Local Settings
+        public string LocalFolderPath { get; set; } = "";
+
         // Immich Settings
         public string BaseUrl { get; set; } = "";
+        public string FallbackBaseUrl { get; set; } = "";
         public string ApiKey { get; set; } = "";
         public string ImmichPersonIds { get; set; } = ""; 
         public string ImmichAlbumId { get; set; } = "";
@@ -40,6 +45,7 @@ namespace NasaWallpaperApp
 
         // Automation Settings
         public bool AutoChangeEnabled { get; set; } = false;
+        public bool MinimizeToTrayOnClose { get; set; } = true;
         public int AutoChangeIntervalMinutes { get; set; } = 240;
     }
 

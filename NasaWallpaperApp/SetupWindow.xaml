@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:NasaWallpaperApp"
         Title="Settings" Height="650" Width="1000"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
-        Background="Transparent" WindowStartupLocation="CenterScreen" FontFamily="Segoe UI">
+        Background="Transparent" WindowStartupLocation="CenterScreen" FontFamily="Segoe UI" Icon="favicon.ico">
 
     <Window.Resources>
         <local:BoolToVisConverter x:Key="BoolToVisConverter"/>
@@ -144,16 +144,34 @@
                         <TextBlock Text="SERVICE PROVIDER" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentColor}" Margin="0,0,0,15"/>
                         <UniformGrid Columns="2" Margin="0,0,0,25">
                              <RadioButton Name="RbProvImmich" Content="Immich" GroupName="Provider" Style="{StaticResource RadioToggleBtn}" Checked="Provider_Checked" IsChecked="True"/>
-                             <RadioButton Name="RbProvGoogle" Content="Google" GroupName="Provider" Style="{StaticResource RadioToggleBtn}" Checked="Provider_Checked"/>
+                             <RadioButton Name="RbProvLocal" Content="Local Folder" GroupName="Provider" Style="{StaticResource RadioToggleBtn}" Checked="Provider_Checked"/>
+                             <RadioButton Name="RbProvGoogle" Content="Google (Coming Soon)" GroupName="Provider" Style="{StaticResource RadioToggleBtn}" IsEnabled="False" Margin="0,5,0,0" Grid.ColumnSpan="2"/>
                         </UniformGrid>
 
                         <Grid>
+                            <!-- LOCAL PANEL -->
+                            <StackPanel Name="LocalServerPanel" Visibility="Collapsed">
+                                <TextBlock Text="LOCAL LIBRARY CONFIG" FontSize="11" FontWeight="Bold" Foreground="#666" Margin="0,0,0,15"/>
+                                
+                                <TextBlock Text="Folder Path" Foreground="#AAA" FontSize="11" Margin="0,0,0,5"/>
+                                <Border Background="#252526" BorderBrush="#444" BorderThickness="1" CornerRadius="4" Height="35" Margin="0,0,0,10">
+                                    <Grid>
+                                        <TextBlock Name="LocalPathText" Text="No folder selected" VerticalAlignment="Center" Margin="10,0,40,0" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                        <Button Content="..." Click="BrowseFolder_Click" Style="{StaticResource ModernBtn}" HorizontalAlignment="Right" Width="30" Background="Transparent" Margin="0,0,2,0"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="Photos from this folder will be used." Foreground="#555" FontSize="10" TextWrapping="Wrap"/>
+                            </StackPanel>
+
                             <!-- IMMICH PANEL -->
                             <StackPanel Name="ImmichServerPanel">
                                 <TextBlock Text="IMMICH CONFIG" FontSize="11" FontWeight="Bold" Foreground="#666" Margin="0,0,0,15"/>
                                 
                                 <TextBlock Text="Server URL" Foreground="#AAA" FontSize="11" Margin="0,0,0,5"/>
                                 <TextBox Name="UrlInput" Height="35" Padding="8,5" Background="#252526" Foreground="White" BorderBrush="#444" VerticalContentAlignment="Center"/>
+
+                                <TextBlock Text="Fallback URL (Optional)" Foreground="#AAA" FontSize="11" Margin="0,10,0,5"/>
+                                <TextBox Name="FallbackUrlInput" Height="35" Padding="8,5" Background="#252526" Foreground="White" BorderBrush="#444" VerticalContentAlignment="Center" ToolTip="Alternative URL (e.g. Local IP) if Server URL is unreachable"/>
                                 
                                 <TextBlock Text="API Key" Foreground="#AAA" FontSize="11" Margin="0,15,0,5"/>
                                 <PasswordBox Name="KeyInput" Height="35" Padding="8,5" Background="#252526" Foreground="White" BorderBrush="#444" VerticalContentAlignment="Center"/>
@@ -192,6 +210,8 @@
                                 <TextBlock Text="Automatically cycles through photos in the background." Foreground="#666" FontSize="11" Margin="55,5,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
+                        
+                        <CheckBox Name="MinimizeToTrayCheck" Content="Minimize to Tray on Close" Foreground="White" FontSize="12" Margin="0,0,0,20"/>
 
                         <TextBlock Text="REFRESH INTERVAL" Foreground="#AAA" FontSize="11" Margin="0,0,0,10"/>
                         <Grid>

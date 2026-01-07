@@ -47,25 +47,19 @@ namespace NasaWallpaperApp
                 trayIcon = new System.Windows.Forms.NotifyIcon();
                 trayIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "");
                 trayIcon.Visible = true;
-                trayIcon.Text = "Immich Wallpaper - Click to Refresh";
-                
-                var contextMenu = new System.Windows.Forms.ContextMenuStrip();
-                contextMenu.Items.Add("Open Gallery", null, (s, e) => { ShowWindow(); });
-                contextMenu.Items.Add("Adjust Current Wallpaper", null, (s, e) => { OpenEditorFromCache(); });
-                contextMenu.Items.Add("Refresh Wallpaper Now", null, (s, e) => { PerformAutoChange(); });
-                contextMenu.Items.Add("-");
-                contextMenu.Items.Add("Exit", null, (s, e) => { 
-                    trayIcon.Visible = false;
-                    System.Windows.Application.Current.Shutdown(); 
-                });
-                
-                trayIcon.ContextMenuStrip = contextMenu;
+                trayIcon.Text = "Immich Wallpaper - Right Click for Menu";
                 
                 trayIcon.MouseClick += (s, e) => {
                     if (e.Button == System.Windows.Forms.MouseButtons.Left)
                     {
-                        PerformAutoChange();
-                        trayIcon.ShowBalloonTip(1000, "Immich Wallpaper", "Refreshing wallpaper...", System.Windows.Forms.ToolTipIcon.None);
+                        // Left click opens the window
+                        ShowWindow();
+                    }
+                    else if (e.Button == System.Windows.Forms.MouseButtons.Right)
+                    {
+                        // Right click opens the custom WPF menu
+                        var menu = new TrayMenuWindow(this);
+                        menu.Show();
                     }
                 };
 
@@ -116,7 +110,7 @@ namespace NasaWallpaperApp
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            if (currentConfig?.AutoChangeEnabled == true)
+            if (currentConfig?.MinimizeToTrayOnClose == true)
             {
                 e.Cancel = true;
                 this.Hide();
@@ -172,13 +166,58 @@ namespace NasaWallpaperApp
             catch { return null; }
         }
 
+        private async System.Threading.Tasks.Task<string> GetResponsiveBaseUrl(HttpClient client)
+        {
+            if (currentConfig == null) return "";
+            
+            // Try Primary
+            try {
+                using var cts = new System.Threading.CancellationTokenSource(1500); 
+                var resp = await client.GetAsync($"{currentConfig.BaseUrl}/api/server-info/ping", cts.Token);
+                if (resp.IsSuccessStatusCode) return currentConfig.BaseUrl;
+            } catch { }
+
+            // Try Fallback
+            if (!string.IsNullOrEmpty(currentConfig.FallbackBaseUrl))
+            {
+                try {
+                    using var cts = new System.Threading.CancellationTokenSource(1500);
+                    var resp = await client.GetAsync($"{currentConfig.FallbackBaseUrl}/api/server-info/ping", cts.Token);
+                    if (resp.IsSuccessStatusCode) return currentConfig.FallbackBaseUrl;
+                } catch { }
+            }
+            
+            return currentConfig.BaseUrl;
+        }
+
         private async void PerformAutoChange()
         {
             if (currentConfig == null) return;
             
             try
             {
+                if (currentConfig.Provider == PhotoProvider.Local)
+                {
+                    if (string.IsNullOrEmpty(currentConfig.LocalFolderPath) || !Directory.Exists(currentConfig.LocalFolderPath)) return;
+                    
+                    var files = Directory.GetFiles(currentConfig.LocalFolderPath, "*.*")
+                        .Where(s => s.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || 
+                                    s.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) || 
+                                    s.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (files.Count > 0)
+                    {
+                        var file = files[new Random().Next(files.Count)];
+                        File.Copy(file, SourceImagePath, true);
+                        WallpaperHelper.SetWallpaper(SourceImagePath, DesktopWallpaperPosition.Fill);
+                    }
+                    return;
+                }
+
                 using HttpClient client = new HttpClient();
+                string immichUrl = currentConfig.BaseUrl;
+
                 if (currentConfig.Provider == PhotoProvider.Google)
                 {
                     string? token = await GetGoogleAccessToken();
@@ -189,6 +228,7 @@ namespace NasaWallpaperApp
                 {
                     if (string.IsNullOrEmpty(currentConfig.BaseUrl)) return;
                     client.DefaultRequestHeaders.Add("x-api-key", currentConfig.ApiKey);
+                    immichUrl = await GetResponsiveBaseUrl(client);
                 }
                 
                 var rawAssets = new List<dynamic>();
@@ -230,7 +270,7 @@ namespace NasaWallpaperApp
                             if (id.StartsWith("tag:")) searchData = new { tagIds = new[] { id.Replace("tag:", "") }, withArchived = false, size = 500 };
                             else searchData = new { personIds = new[] { id }, withArchived = false, size = 500 };
 
-                            var resp = await client.PostAsync($"{currentConfig.BaseUrl}/api/search/metadata", new StringContent(JsonConvert.SerializeObject(searchData), Encoding.UTF8, "application/json"));
+                            var resp = await client.PostAsync($"{immichUrl}/api/search/metadata", new StringContent(JsonConvert.SerializeObject(searchData), Encoding.UTF8, "application/json"));
                             if (resp.IsSuccessStatusCode)
                             {
                                 dynamic result = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync())!;
@@ -240,7 +280,7 @@ namespace NasaWallpaperApp
                     }
                     else if (currentConfig.Mode == PhotoMode.Album)
                     {
-                        var resp = await client.GetAsync($"{currentConfig.BaseUrl}/api/albums/{currentConfig.ImmichAlbumId}");
+                        var resp = await client.GetAsync($"{immichUrl}/api/albums/{currentConfig.ImmichAlbumId}");
                         if (resp.IsSuccessStatusCode)
                         {
                             dynamic result = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync())!;
@@ -250,7 +290,7 @@ namespace NasaWallpaperApp
                     else
                     {
                         var searchData = new { type = "IMAGE", size = 500, withArchived = false };
-                        var resp = await client.PostAsync($"{currentConfig.BaseUrl}/api/search/metadata", new StringContent(JsonConvert.SerializeObject(searchData), Encoding.UTF8, "application/json"));
+                        var resp = await client.PostAsync($"{immichUrl}/api/search/metadata", new StringContent(JsonConvert.SerializeObject(searchData), Encoding.UTF8, "application/json"));
                         if (resp.IsSuccessStatusCode)
                         {
                             dynamic result = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync())!;
@@ -266,7 +306,7 @@ namespace NasaWallpaperApp
                     
                     Random rnd = new Random();
                     var selected = uniqueAssets[rnd.Next(uniqueAssets.Count)];
-                    string? downloadUrl = (currentConfig.Provider == PhotoProvider.Google) ? (string)selected.baseUrl + "=w2500-h2500" : $"{currentConfig.BaseUrl}/api/assets/{selected.id}/original";
+                    string? downloadUrl = (currentConfig.Provider == PhotoProvider.Google) ? (string)selected.baseUrl + "=w2500-h2500" : $"{immichUrl}/api/assets/{selected.id}/original";
                     
                     byte[] imageBytes = await client.GetByteArrayAsync(downloadUrl);
                     File.WriteAllBytes(SourceImagePath, imageBytes);
@@ -330,7 +370,45 @@ namespace NasaWallpaperApp
 
             try
             {
+                if (currentConfig.Provider == PhotoProvider.Local)
+                {
+                    if (string.IsNullOrEmpty(currentConfig.LocalFolderPath) || !Directory.Exists(currentConfig.LocalFolderPath)) 
+                    { 
+                        StatusLabel.Text = "Local folder not found."; 
+                        return; 
+                    }
+                    
+                    var files = Directory.GetFiles(currentConfig.LocalFolderPath, "*.*")
+                        .Where(s => s.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || 
+                                    s.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) || 
+                                    s.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                                    s.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase))
+                        .OrderBy(x => Guid.NewGuid())
+                        .Take(20)
+                        .ToList();
+
+                    if (files.Count == 0) { StatusLabel.Text = "No images found in folder."; return; }
+
+                    var localDisplayList = new List<ImmichPhoto>();
+                    foreach (var file in files)
+                    {
+                        var bitmap = new BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.UriSource = new Uri(file);
+                        bitmap.DecodePixelWidth = 300;
+                        bitmap.EndInit();
+                        bitmap.Freeze();
+                        localDisplayList.Add(new ImmichPhoto { Id = file, Thumbnail = bitmap });
+                    }
+                    ImageGallery.ItemsSource = localDisplayList;
+                    StatusLabel.Text = $"Loaded {localDisplayList.Count} local photos.";
+                    return;
+                }
+
                 using HttpClient client = new HttpClient();
+                string immichUrl = currentConfig.BaseUrl;
+
                 if (currentConfig.Provider == PhotoProvider.Google)
                 {
                     string? token = await GetGoogleAccessToken();
@@ -341,6 +419,7 @@ namespace NasaWallpaperApp
                 {
                     if (string.IsNullOrEmpty(currentConfig.BaseUrl)) { System.Windows.MessageBox.Show("Please configure Immich in Settings."); return; }
                     client.DefaultRequestHeaders.Add("x-api-key", currentConfig.ApiKey);
+                    immichUrl = await GetResponsiveBaseUrl(client);
                 }
 
                 StatusLabel.Text = "Searching for photos...";
@@ -385,7 +464,7 @@ namespace NasaWallpaperApp
                             if (id.StartsWith("tag:")) searchData = new { tagIds = new[] { id.Replace("tag:", "") }, withArchived = false, size = 1000 };
                             else searchData = new { personIds = new[] { id }, withArchived = false, size = 1000 };
 
-                            var response = await client.PostAsync($"{currentConfig.BaseUrl}/api/search/metadata", new StringContent(JsonConvert.SerializeObject(searchData), Encoding.UTF8, "application/json"));
+                            var response = await client.PostAsync($"{immichUrl}/api/search/metadata", new StringContent(JsonConvert.SerializeObject(searchData), Encoding.UTF8, "application/json"));
                             if (response.IsSuccessStatusCode)
                             {
                                 dynamic result = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync())!;
@@ -395,7 +474,7 @@ namespace NasaWallpaperApp
                     }
                     else if (currentConfig.Mode == PhotoMode.Album)
                     {
-                        var response = await client.GetAsync($"{currentConfig.BaseUrl}/api/albums/{currentConfig.ImmichAlbumId}");
+                        var response = await client.GetAsync($"{immichUrl}/api/albums/{currentConfig.ImmichAlbumId}");
                         if (response.IsSuccessStatusCode)
                         {
                             dynamic result = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync())!;
@@ -405,7 +484,7 @@ namespace NasaWallpaperApp
                     else
                     {
                         var searchData = new { type = "IMAGE", size = 1000, withArchived = false };
-                        var response = await client.PostAsync($"{currentConfig.BaseUrl}/api/search/metadata", new StringContent(JsonConvert.SerializeObject(searchData), Encoding.UTF8, "application/json"));
+                        var response = await client.PostAsync($"{immichUrl}/api/search/metadata", new StringContent(JsonConvert.SerializeObject(searchData), Encoding.UTF8, "application/json"));
                         if (response.IsSuccessStatusCode)
                         {
                             dynamic result = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync())!;
@@ -429,7 +508,7 @@ namespace NasaWallpaperApp
                 foreach (var asset in selectedAssets)
                 {
                     StatusLabel.Text = $"Loading preview {displayList.Count + 1}/4...";
-                    string thumbUrl = (currentConfig.Provider == PhotoProvider.Google) ? (string)asset.baseUrl + "=w500-h500" : $"{currentConfig.BaseUrl}/api/assets/{asset.id}/thumbnail";
+                    string thumbUrl = (currentConfig.Provider == PhotoProvider.Google) ? (string)asset.baseUrl + "=w500-h500" : $"{immichUrl}/api/assets/{asset.id}/thumbnail";
                     byte[] thumbData = await client.GetByteArrayAsync(thumbUrl);
 
                     var bitmap = new BitmapImage();
@@ -456,8 +535,31 @@ namespace NasaWallpaperApp
             {
                 try
                 {
+                    if (currentConfig.Provider == PhotoProvider.Local)
+                    {
+                        File.Copy(selected.Id!, SourceImagePath, true);
+                        var bmp = new BitmapImage();
+                        using (var stream = File.OpenRead(SourceImagePath))
+                        {
+                            bmp.BeginInit();
+                            bmp.CacheOption = BitmapCacheOption.OnLoad;
+                            bmp.StreamSource = stream;
+                            bmp.EndInit();
+                        }
+                        bmp.Freeze();
+                        var ed = new EditorWindow(bmp);
+                        if (ed.ShowDialog() == true)
+                        {
+                            WallpaperHelper.SetWallpaper(ed.ResultPath, DesktopWallpaperPosition.Fill);
+                            StatusLabel.Text = "Adjusted Wallpaper Updated!";
+                        }
+                        return;
+                    }
+
                     StatusLabel.Text = "Downloading for editor...";
                     using HttpClient client = new HttpClient();
+                    string immichUrl = currentConfig.BaseUrl;
+
                     if (currentConfig.Provider == PhotoProvider.Google)
                     {
                         string? token = await GetGoogleAccessToken();
@@ -467,6 +569,7 @@ namespace NasaWallpaperApp
                     else
                     {
                         client.DefaultRequestHeaders.Add("x-api-key", currentConfig.ApiKey);
+                        immichUrl = await GetResponsiveBaseUrl(client);
                     }
 
                     string? downloadUrl = (currentConfig.Provider == PhotoProvider.Google) 
@@ -476,7 +579,7 @@ namespace NasaWallpaperApp
                                 dynamic res = JsonConvert.DeserializeObject(json)!;
                                 return (string)res.baseUrl + "=w2500-h2500";
                             })).Result 
-                        : $"{currentConfig.BaseUrl}/api/assets/{selected.Id}/original";
+                        : $"{immichUrl}/api/assets/{selected.Id}/original";
 
                     byte[] imageBytes = await client.GetByteArrayAsync(downloadUrl);
                     File.WriteAllBytes(SourceImagePath, imageBytes);
@@ -502,8 +605,26 @@ namespace NasaWallpaperApp
             {
                 try
                 {
+                    if (currentConfig.Provider == PhotoProvider.Local)
+                    {
+                        File.Copy(selected.Id!, SourceImagePath, true);
+                        
+                        DesktopWallpaperPosition p = DesktopWallpaperPosition.Fill;
+                        if (RbFit.IsChecked == true) p = DesktopWallpaperPosition.Fit;
+                        else if (RbStretch.IsChecked == true) p = DesktopWallpaperPosition.Stretch;
+                        else if (RbTile.IsChecked == true) p = DesktopWallpaperPosition.Tile;
+                        else if (RbCenter.IsChecked == true) p = DesktopWallpaperPosition.Center;
+                        else if (RbSpan.IsChecked == true) p = DesktopWallpaperPosition.Span;
+
+                        WallpaperHelper.SetWallpaper(SourceImagePath, p);
+                        StatusLabel.Text = "Wallpaper Updated!";
+                        return;
+                    }
+
                     StatusLabel.Text = "Applying high-res wallpaper...";
                     using HttpClient client = new HttpClient();
+                    string immichUrl = currentConfig.BaseUrl;
+
                     if (currentConfig.Provider == PhotoProvider.Google)
                     {
                         string? token = await GetGoogleAccessToken();
@@ -513,6 +634,7 @@ namespace NasaWallpaperApp
                     else
                     {
                         client.DefaultRequestHeaders.Add("x-api-key", currentConfig.ApiKey);
+                        immichUrl = await GetResponsiveBaseUrl(client);
                     }
 
                     string? downloadUrl = (currentConfig.Provider == PhotoProvider.Google) 
@@ -522,7 +644,7 @@ namespace NasaWallpaperApp
                                 dynamic res = JsonConvert.DeserializeObject(json)!;
                                 return (string)res.baseUrl + "=w2500-h2500";
                             })).Result 
-                        : $"{currentConfig.BaseUrl}/api/assets/{selected.Id}/original";
+                        : $"{immichUrl}/api/assets/{selected.Id}/original";
 
                     byte[] imageBytes = await client.GetByteArrayAsync(downloadUrl);
                     File.WriteAllBytes(SourceImagePath, imageBytes);
@@ -539,6 +661,19 @@ namespace NasaWallpaperApp
                 }
                 catch (Exception ex) { System.Windows.MessageBox.Show("Set Error: " + ex.Message); }
             }
+        }
+
+        public void ShowFromTray() => ShowWindow();
+        public void RefreshFromTray()
+        {
+            PerformAutoChange();
+            trayIcon?.ShowBalloonTip(1000, "Immich Wallpaper", "Refreshing wallpaper...", System.Windows.Forms.ToolTipIcon.None);
+        }
+        public void AdjustFromTray() => OpenEditorFromCache();
+        public void ExitFromTray()
+        {
+            if (trayIcon != null) trayIcon.Visible = false;
+            System.Windows.Application.Current.Shutdown();
         }
     }
 }
